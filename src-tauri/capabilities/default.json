@@ -11,6 +11,8 @@
     "fs:allow-applocaldata-read",
     "fs:allow-applocaldata-write",
     "sql:default",
-    "sql:allow-execute"
+    "sql:allow-execute",
+    "dialog:default",
+    "fs:default"
   ]
 }

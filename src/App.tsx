@@ -6,14 +6,20 @@ import Select, {
   SingleValueProps,
   SingleValue,
 } from 'react-select';
-
+import { unparse } from 'papaparse';
+import { save } from '@tauri-apps/plugin-dialog';
+import { downloadDir } from '@tauri-apps/api/path';
+import { writeTextFile } from '@tauri-apps/plugin-fs';
 import './App.css';
 
 type LogEntry = {
   datetime: string;
   description: string;
   hours: number;
+  processed: boolean;
 };
+
+const SUGGESTED_CSV_FILENAME = 'tagalog-data.csv';
 
 function App() {
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
@@ -31,7 +37,8 @@ function App() {
           CREATE TABLE IF NOT EXISTS log_entries (
             datetime TEXT, 
             hours NUMERIC(4,1), 
-            description TEXT
+            description TEXT,
+            processed INTEGER
           );
         `);
 
@@ -107,6 +114,30 @@ function App() {
     // TODO: The search doesn't handle multiple words as well as it could
   );
 
+  const DownloadCSV: React.FC = () => {
+    const handleDownload = async () => {
+      const filePath = await save({
+        defaultPath: (await downloadDir()) + '/' + SUGGESTED_CSV_FILENAME,
+        filters: [{ name: 'CSV Files', extensions: ['csv'] }],
+      });
+
+      if (filePath) {
+        const csv_data = unparse(logEntries);
+        await writeTextFile(filePath, csv_data);
+        console.log(`CSV saved to: ${filePath}`);
+      }
+    };
+
+    return (
+      <button
+        onClick={handleDownload}
+        className="p-2 bg-blue-500 text-white rounded"
+      >
+        Download CSV
+      </button>
+    );
+  };
+
   const log_to_db = async () => {
     console.log('Hours:', hours);
     console.log('Description:', description);
@@ -123,8 +154,9 @@ function App() {
         ...prevEntries,
         {
           datetime: new Date().toISOString(),
-          description,
-          hours,
+          description: description,
+          hours: hours,
+          processed: false,
         },
       ]);
 
@@ -163,6 +195,7 @@ function App() {
         <br />
         <LogEntryAutoCompleteWidget />
       </form>
+      <DownloadCSV />
     </main>
   );
 }
